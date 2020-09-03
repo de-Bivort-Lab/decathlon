@@ -39,7 +39,7 @@ D_comb.batch = cat(1,D_comb.batch{:});
 % mean impute the data
 D_comb = collapseMetrics(D_comb,opts{:});
 if isfield(D_comb,'loadings')
-    fn = [fieldnames(D);'loadings';'loadings_labels'];
+    fn = [fieldnames(D);'loadings';'loadings_labels';'variance_explained'];
     fn = cat(1,fn',cell(1,numel(fn)));
     D_copy = repmat(struct(fn{:}),2,1);
     fn = fieldnames(D);
@@ -49,6 +49,7 @@ if isfield(D_comb,'loadings')
         end
         D_copy(i).loadings = D_comb.loadings;
         D_copy(i).loadings_labels = D_comb.loadings_labels;
+        D_copy(i).variance_explained = D_comb.variance_explained;
     end
     D = D_copy;
 end

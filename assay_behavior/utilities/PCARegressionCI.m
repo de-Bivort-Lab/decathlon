@@ -27,7 +27,7 @@ for i=1:numel(varargin)
 end
 
 % configure parameters here:
-numReps=1000;   % # of bootstrap replicates
+numReps=100;   % # of bootstrap replicates
 CI=95;          % confidence interval to be estimated
 
 
