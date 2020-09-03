@@ -14,5 +14,5 @@ for i=1:size(pairs,1)
     [D(pairs(i,1)).geneID,p_a] = sort(D(pairs(i,1)).geneID);
     D(pairs(i,1)).data = D(pairs(i,1)).data(:,p_a);
     [D(pairs(i,2)).geneID,p_b] = sort(D(pairs(i,2)).geneID);
-    D(pairs(i,2)).data = D(pairs(i,2)).data(:,p_b);
+    D(pairs(i,1)).data = D(pairs(i,1)).data(:,p_b);
 end

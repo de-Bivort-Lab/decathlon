@@ -6,9 +6,9 @@ function D = load_decathlon_structs(fdir,var_name)
 fpaths = recursiveSearch(fdir);
 [~,fnames,fext] = cellfun(@fileparts,fpaths,'UniformOutput',false);
 fnames = cellfun(@(path,ext) [path ext], fnames, fext, 'UniformOutput', false);
-fidx = find(strcmp(fnames,'decathlon_behavior_data.mat'));
+fidx = find(strcmp(fnames,'decathlon_final_data.mat'));
 if ~fidx
-    error('Could not locate decathlon_behavior_data.mat in input directory.');
+    error('Could not locate decathlon_final_data.mat in input directory.');
 end
 
 D = load(fpaths{fidx},var_name);
