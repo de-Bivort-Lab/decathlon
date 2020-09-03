@@ -3,7 +3,7 @@
 fdir = uigetdir(pwd,'Select the decathlon_paper_data directory');
 D_b = load_decathlon_structs(fdir,'D_als_filled');
 D_b = D_b(1:2);
-D_b = pair_decathlon_structs(D_b,'CollapseMode','PCA','CollapseFields','none');
+%D_b = pair_decathlon_structs(D_b,'CollapseMode','PCA','CollapseFields','none');
 f = true(192,1);
 f([99 114])=false;
 d = NaN(size(D_b(1).data));
