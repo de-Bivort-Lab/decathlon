@@ -81,8 +81,11 @@ for j=1:numel(fDir)
     
 end
 
-
-fPaths = cellfun(@unixify, fPaths, 'UniformOutput',false);
+for i=1:numel(fPaths)
+    s = fPaths{i};
+    s(s=='\') = '/';
+    fPaths{i} = s;
+end
 
 if size(fPaths,2) > size(fPaths,1)
     fPaths = fPaths';
