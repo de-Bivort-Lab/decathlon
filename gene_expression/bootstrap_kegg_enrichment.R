@@ -24,7 +24,7 @@ d12_num_metrics = list();
 d12_metric_mats = list();
 
 
-for(k in 1:2){
+for(k in 1:3){
   
   # compute observed enrichment and filter duplicate results
   obs_d <- read.csv(obs_paths[k],sep=",", stringsAsFactors = FALSE);
@@ -50,6 +50,8 @@ for(k in 1:2){
     
     # define bootstrapped data paths
     bs_paths = list.files(bs_sub_dirs[j], full.names = TRUE);
+    
+    #bs_paths = bs_paths[1:5]
  
     # initialize matrices
     bs_pval_mat = replicate(length(upgs),list(matrix(1, nrow = length(obs_cats), ncol = length(bs_paths))))
@@ -58,12 +60,14 @@ for(k in 1:2){
     bs_metric_mat = replicate(length(upgs),list(matrix(0, nrow = length(obs_cats), ncol = ncol(obs_d)-1)))
     cat_counts = replicate(length(upgs),list(replicate(length(obs_cats), 0)))
     
+    
     for(i in 1:length(bs_paths)){
       
       
       print(sprintf("d%i_%s, iter = %i of %i",k,fdesc,i,length(bs_paths)))
       
       # read in model pvalue data
+      #bs_d <- read.csv(bs_paths[1],sep=",", stringsAsFactors = FALSE);
       bs_d <- read.csv(bs_paths[i],sep=",", stringsAsFactors = FALSE);
       
       for(L in 1:length(upgs)){
@@ -77,13 +81,19 @@ for(k in 1:2){
           metric_idx = bs_results$metric_idx[p_thresh];
           metric_cats = bs_results$Description[p_thresh];
           
-          
           # get genelist for each enrichment category
+          overlap_cats = unique(metric_cats[is.element(metric_cats,obs_cats)])
+          for(cat in overlap_cats){
+            # increment metric counts
+            cat_mask = obs_cats == cat
+            metric_mask = metric_idx[metric_cats == cat]
+            bs_metric_mat[[L]][cat_mask, metric_mask] = bs_metric_mat[[L]][cat_mask, metric_mask] + 1
+          }
+          
+          # compute avg. min p-value and avg. num metrics
           tmp_cats = bs_results$Description
           bs_cats = unique(tmp_cats)
           overlap_cats = bs_cats[is.element(bs_cats,obs_cats)]
-          
-          # compute avg. min p-value and avg. num metrics
           for(cat in overlap_cats){
             bs_pval_mat[[L]][obs_cats == cat,i] = min(bs_results$p.adjust[tmp_cats == cat])
             bs_num_metrics[[L]][obs_cats == cat,i] = sum(bs_results$p.adjust[tmp_cats == cat] < 0.05)
@@ -105,10 +115,6 @@ for(k in 1:2){
             gene_mask = is.element(obs_all_genes,overlap_cat_genes)
             cat_mask = obs_cats == cat
             bs_gene_mat[[L]][cat_mask, gene_mask] = bs_gene_mat[[L]][cat_mask, gene_mask] + 1
-            
-            # increment metric counts
-            metric_mask = metric_idx[metric_cats == cat]
-            bs_metric_mat[[L]][cat_mask, metric_mask] = bs_metric_mat[[L]][cat_mask, metric_mask] + 1
           }
       }
     }

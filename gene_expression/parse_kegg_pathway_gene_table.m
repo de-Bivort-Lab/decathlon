@@ -1,7 +1,7 @@
 
 % read in raw text
 p = ['C:\Users\winsl0w\Documents\decathlon\decathlon_paper_code\'...
-    'decathlon\gene_expression\kegg_all_pathway_genes.txt'];
+    'decathlon\gene_expression\id_conversion_data\kegg_all_pathway_genes.txt'];
 
 fid = fopen(p);
 raw = textscan(fid,'%s','delimiter','\t');

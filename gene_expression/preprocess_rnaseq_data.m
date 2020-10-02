@@ -6,7 +6,7 @@ function D = preprocess_rnaseq_data(D, min_tot_reads, min_rpm)
 % 4. Quantile normalize across individual read count distributions
 
 % use gene names to align reads across decathlon batches
-D = pair_rnaseq(D(1:2));
+D = pair_rnaseq(D);
 
 % filter read data, update individual fly IDs, and normalize to RPM
 reads = cell(numel(D),1);
@@ -16,7 +16,10 @@ for i=1:numel(reads)
     % filter out flies with too few reads
     fly_filt = nansum(reads{i},2) > min_tot_reads;
     reads{i} = reads{i}(fly_filt,:);
-    D(i).ID = D(i).ID(fly_filt) - (i-1)*192;
+    D(i).ID = D(i).ID(fly_filt);
+    if i==2
+        D(i).ID = D(i).ID - 192;
+    end
     
     % normalize to reads per million
     tot_reads = sum(reads{i},2);

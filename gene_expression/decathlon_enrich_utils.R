@@ -82,11 +82,10 @@ concat_kegg_enrichments <- function(d, apriori_grp = "all"){
     
     # compute kegg enrichment for col
     geneList = geneBackground[d_apriori[[j]]>0]
-    kk <- enrichKEGG(gene = geneList,organism = 'dme', universe = geneBackground, pvalueCutoff = 0.05);
+    kk <- enrichKEGG(gene = geneList,organism = 'dme', universe = geneBackground, pvalueCutoff = 0.05, keyType = "kegg");
     
     # threshold pval
     results = attr(kk,"result");
-    print(length(results))
     if(length(results)){
       results$metric_idx <- replicate(nrow(results), j)
     }

@@ -27,7 +27,7 @@ for i=1:numel(varargin)
 end
 
 % configure parameters here:
-numReps=100;   % # of bootstrap replicates
+numReps=500;   % # of bootstrap replicates
 CI=95;          % confidence interval to be estimated
 
 
@@ -42,8 +42,8 @@ xPts=linspace(xlim(1),xlim(2),numXs);
 
 out.fitVals=zeros(numReps,numXs);
 obs = pca(data);
-x_bar=mean(data(:,1));
-y_bar=mean(data(:,2));
+x_bar=nanmean(data(:,1));
+y_bar=nanmean(data(:,2));
 m=obs(2,1)/obs(1,1);
 fx = @(x) m*x + (y_bar - m*x_bar);
 obs =m*xPts+(y_bar-m*x_bar);
@@ -51,7 +51,7 @@ obs =m*xPts+(y_bar-m*x_bar);
 % bootstrap loop
 m_bs = NaN(numReps,1);
 for i=1:numReps
-    dataTemp=data(randperm(numPts,round(numPts*0.7)),:);
+    dataTemp=data(randi(numPts,numPts,1),:);
     [eigenvectors,~,~] = pca(dataTemp);
     x_bar=mean(dataTemp(:,1));
     y_bar=mean(dataTemp(:,2));
@@ -59,11 +59,6 @@ for i=1:numReps
     out.fitVals(i,:)=m*xPts+(y_bar-m*x_bar);
     m_bs(i) = m;
 end
-
-%out.fitVals = nanzscore(out.fitVals);
-m = median(m_bs);
-fx = @(x) m*x + (y_bar - m*x_bar);
-obs =m*xPts+(y_bar-m*x_bar);
 
 % save CI bounds
 out.lower=prctile(out.fitVals,(100-CI)/2);

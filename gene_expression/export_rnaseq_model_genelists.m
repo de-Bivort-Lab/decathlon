@@ -2,8 +2,25 @@
 % load behavioral data
 fdir = uigetdir(pwd,'Select the decathlon_paper_data directory');
 D_b = load_decathlon_structs(fdir,'D_als_filled');
-D_b = D_b(1:2);
-%D_b = pair_decathlon_structs(D_b,'CollapseMode','PCA','CollapseFields','none');
+
+% get field sorting order
+for i=1:numel(D_b)
+    fields = D_b(i).fields;
+    [a,m,d] = parse_fieldnames(fields);
+    fields = cellfun(@(a,m) sprintf('%s %s',a,m),a,m,'UniformOutput',false);
+    is_circ = strcmp(a,'Circadian');
+    fields(is_circ) = cellfun(@(s,d) sprintf('%s (%i)',s,d),...
+        fields(is_circ),num2cell(d(is_circ)),'UniformOutput',false);
+    D_b(i).fields = fields;
+    
+    % sort by apriori group for d1, then match d2 to d1
+    [~, grp_name, grp_idx] = group_apriori_fields(D_b(i));
+    D_b(i).fields = D_b(i).fields(cat(1,grp_idx{:}));
+    D_b(i).data = D_b(i).data(:,cat(1,grp_idx{:}));
+end
+
+
+% insert missing individual data into D1 struct
 f = true(192,1);
 f([99 114])=false;
 d = NaN(size(D_b(1).data));
@@ -18,7 +35,7 @@ molaspass=interp1([1 51 102 153 204 256],...
     
 % load rnaseq data
 load(cat(2,fdir,'/decathlon_rnaseq_data.mat'));
-D_p = preprocess_rnaseq_data(D_seq(1:2), min_tot_reads, min_rpm);
+D_p = preprocess_rnaseq_data(D_seq, min_tot_reads, min_rpm);
 
 % update behavioral data struct ID no.
 for i=1:numel(D_p)   
@@ -44,7 +61,7 @@ for i=1:numel(model_p_value)
     p = -log10(model_p_value{i})';
     p(isnan(p)) = 0;
     
-    [~, ~, grp_idx] = group_apriori_fields(D_b(1));
+    [~, ~, grp_idx] = group_apriori_fields(D_b(i));
     grp_idx = cat(1,grp_idx{:});
     [~,g_perm] = sort(nanmean(p),'descend');
 
@@ -84,9 +101,9 @@ end
 [bg_kegg_ids,has_kegg_gid] = convert_gene_ids(D_p(1).geneID,'fbgn','kegg');
 
 % Export observed model hits
-[~, grp_name, grp_idx] = group_apriori_fields(D_b(1));
 for i=1:numel(model_p_value)
     fname = sprintf('%sobs_data/D%i_pval_obs.csv',save_dir,i);
+    [~, ~, grp_idx] = group_apriori_fields(D_b(i));
     pvals = model_p_value{i}(has_kegg_gid,cat(1,grp_idx{:}));
     write_csv_mat(fname,pvals<alpha,grp_idx,grp_name,bg_kegg_ids);
 end
@@ -96,11 +113,10 @@ end
 % ClusterProfiler analysis in R
 
 % query field names and group aprior fields
-f = D_b(1).fields;
 output_dir = sprintf('%sbs_data',save_dir);
 
 % iterate over decathlon batches and aprior groups
-nreps = 3;
+nreps = 1000;
 for i=1:numel(D_b)
     for rep = 1:nreps
         
@@ -109,6 +125,7 @@ for i=1:numel(D_b)
         idx = randi(size(D_b(i).data,1),[size(D_b(i).data,1) 1]);
         
         % bootstrap resample individual behavior and gene data
+        [~, ~, grp_idx] = group_apriori_fields(D_b(i));
         b = D_b(i).data(idx,cat(1,grp_idx{:}));
         g = D_p(i).data(idx,has_kegg_gid);
 
@@ -142,4 +159,26 @@ end
 
 
 
+
+%% save model data and meta data to struct
+
+D_rnaseq_models = struct('fbgn',[],'kegg',[],'gene_names',[],...
+    'gene_symbols',[],'pvals',[],'metric_labels',[]);
+
+D_rnaseq_models.fbgn = D_p(1).geneID;
+D_rnaseq_models.kegg = cell(numel(D_p(1).geneID),1);
+[g,f] = convert_gene_ids(D_p(1).geneID,'fbgn','kegg');
+D_rnaseq_models.kegg(f) = g;
+D_rnaseq_models.gene_names = cell(numel(D_p(1).geneID),1);
+[g,f] = convert_gene_ids(D_p(1).geneID,'fbgn','name');
+D_rnaseq_models.gene_names(f) = g;
+D_rnaseq_models.gene_symbols = cell(numel(D_p(1).geneID),1);
+[g,f] = convert_gene_ids(D_p(1).geneID,'fbgn','symbol');
+D_rnaseq_models.gene_symbols(f) = g;
+D_rnaseq_models.pvals = model_p_value;
+
+D_rnaseq_models.metric_labels = cell(size(model_p_value));
+for i=1:numel(model_p_value)
+    D_rnaseq_models.metric_labels{i} = D_b(i).fields;
+end
 

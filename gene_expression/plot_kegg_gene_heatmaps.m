@@ -1,9 +1,7 @@
-%% read in enrichment bootstrapped pvalues output by:
-% 'shuffle_kegg_individual_gene_breakdown_(mean_log_p).r'
+% Plot observed and bootstrapped - shuffled and unshuffled - enrichemnt
+% results
 
 fdir = uigetdir(pwd,'Select RNAseq bootstrap output directory');
-
-%%
 
 shuf_p_paths = ...
     recursiveSearch(fdir,'ext','.csv','keyword','_shuffled_all_pval_mat');
@@ -138,50 +136,145 @@ for i=1:numel(d_p_unshuf)
     end
 end
 
-% pair dot plot
-[p_a,p_b] = ismember(d_p_unshuf(1).rows,d_p_unshuf(2).rows);
-a = d_p_unshuf(1).data(p_a);
-b = d_p_unshuf(2).data(p_b(p_b>0));
-d2_lab = d_p_unshuf(2).rows(p_b(p_b>0));
 
-figure;
-subplot(1,2,1);
-plot_pair_dot(a,b,'k',[]);
-set(gca,'XTick',[1 2],'XTickLabel',{'D1';'D2'},'YLim',[0 15]);
-title('unshuffled');
-ylabel('-log_{10}[p-value]');
-hold on;
-for i=1:numel(d2_lab)
-   text(2.1,b(i),d2_lab{i},'FontSize',6); 
+% pair dot plot
+
+pairs = unique_idx_pairs(3,true);
+d_paired_unshuf = d_p_unshuf;
+for i=1:size(pairs,1)
+    [p_a,p_b] = ismember(d_paired_unshuf(pairs(i,1)).rows,d_paired_unshuf(pairs(i,2)).rows);
+    d_paired_unshuf(pairs(i,1)).data = d_paired_unshuf(pairs(i,1)).data(p_a);
+    d_paired_unshuf(pairs(i,2)).data = d_paired_unshuf(pairs(i,2)).data(p_b(p_b>0));
+    d_paired_unshuf(pairs(i,1)).rows = d_paired_unshuf(pairs(i,1)).rows(p_a);
+    d_paired_unshuf(pairs(i,2)).rows = d_paired_unshuf(pairs(i,2)).rows(p_b(p_b>0));
 end
 
-[p_a,p_b] = ismember(d_p_shuf(1).rows,d_p_shuf(2).rows);
-a = d_p_shuf(1).data(p_a);
-b = d_p_shuf(2).data(p_b(p_b>0));
+figure;
+for i=1:size(pairs,1)
+    subplot(1,size(pairs,1),i);
+    a = d_paired_unshuf(pairs(i,1)).data;
+    b = d_paired_unshuf(pairs(i,2)).data;
+    plot_pair_dot(a,b,'k',[]);
+    xticks = arrayfun(@(ii) sprintf('D%i',ii),pairs(i,:),'UniformOutput',false);
+    set(gca,'XTick',[1 2],'XTickLabel',xticks,'YLim',[0 15]);
+    title('unshuffled');
+    ylabel('-log_{10}[p-value]');
+    hold on;
+    for j=1:numel(d_paired_unshuf(pairs(i,2)).rows)
+       text(2.1,b(j),d_paired_unshuf(pairs(i,2)).rows{j},'FontSize',6); 
+    end
+end
+%{
+for i=1:size(pairs,1)
+    [p_a,p_b] = ismember(d_p_unshuf(pairs(i,1)).rows,d_p_unshuf(pairs(i,2)).rows);
+    a = d_p_unshuf(pairs(i,1)).data(p_a);
+    b = d_p_unshuf(pairs(i,2)).data(p_b(p_b>0));
+    d2_lab = d_p_unshuf(2).rows(p_b(p_b>0));
+
+    subplot(size(pairs,1),2,(i-1)*2+1);
+    plot_pair_dot(a,b,'k',[]);
+    xticks = arrayfun(@(ii) sprintf('D%i',ii),pairs(i,:),'UniformOutput',false);
+    set(gca,'XTick',[1 2],'XTickLabel',xticks,'YLim',[0 15]);
+    title('unshuffled');
+    ylabel('-log_{10}[p-value]');
+    hold on;
+    for j=1:numel(d2_lab)
+       text(2.1,b(j),d2_lab{j},'FontSize',6); 
+    end
+
+    [p_a,p_b] = ismember(d_p_shuf(pairs(i,1)).rows,d_p_shuf(pairs(i,2)).rows);
+    a = d_p_shuf(1).data(p_a);
+    b = d_p_shuf(2).data(p_b(p_b>0));
 
 
-subplot(1,2,2);
-plot_pair_dot(a,b,'k',[]);
-set(gca,'XTick',[1 2],'XTickLabel',{'D1';'D2'});
-title('shuffled');
-ylabel('-log_{10}[p-value]');
-set(gca,'YLim',[0 15]);
+    subplot(size(pairs,1),2,i*2);
+    plot_pair_dot(a,b,'k',[]);
+    set(gca,'XTick',[1 2],'XTickLabel',xticks);
+    title('shuffled');
+    ylabel('-log_{10}[p-value]');
+    set(gca,'YLim',[0 15]);
+end
+%}
 
 %% map metric names to row labels
 
 % load behavioral data
-fdir = uigetdir(pwd,'Select the decathlon_paper_data directory');
-D_b = load_decathlon_structs(fdir,'D_als_filled');
-D_b = D_b(1:2);
-D_b = pair_decathlon_structs(D_b,'CollapseMode','PCA','CollapseFields','none');
-fields = D_b(1).fields;
-[~, ~, grp_idx] = group_apriori_fields(D_b(1));
-grp_idx = cat(1,grp_idx{:});
-for i=1:numel(d_m_unshuf)
-    d_m_unshuf(i).cols = fields(grp_idx);
+dec_data_dir = uigetdir(pwd,'Select the decathlon_paper_data directory');
+D_b = load_decathlon_structs(dec_data_dir,'D_als_filled');
+
+% get field sorting order
+for i=1:numel(D_b)
+    fields = D_b(i).fields;
+    [a,m,d] = parse_fieldnames(fields);
+    fields = cellfun(@(a,m) sprintf('%s %s',a,m),a,m,'UniformOutput',false);
+    is_circ = strcmp(a,'Circadian');
+    fields(is_circ) = cellfun(@(s,d) sprintf('%s (%i)',s,d),...
+        fields(is_circ),num2cell(d(is_circ)),'UniformOutput',false);
+    D_b(i).fields = fields;
+    
+    % sort by apriori group for d1, then match d2 to d1
+    [~, grp_name, grp_idx] = group_apriori_fields(D_b(i));
+    D_b(i).fields = D_b(i).fields(cat(1,grp_idx{:}));
+    D_b(i).data = D_b(i).data(:,cat(1,grp_idx{:}));
 end
 
+for i=1:numel(d_m_unshuf)
+    [~, ~, grp_idx] = group_apriori_fields(D_b(i));
+    grp_idx = cat(1,grp_idx{:});
+    d_m_unshuf(i).cols = D_b(i).fields(grp_idx);
+end
+
+% ----  PLOT KEGG PATHWAY x BEHAVIORAL METRIC HEATMAPS ---- %
+for i=1:numel(d_m_unshuf)
+    
+    [~, ~, grp_idx] = group_apriori_fields(D_b(i));
+    
+    figure;
+    imagesc(flip(d_m_unshuf(i).data));
+    colormap(flip(bone));
+    caxis([0 1]);
+    cb = colorbar;
+    cb.Label.String = 'Bootstrap probability';
+    title(sprintf('decathlon batch #%i',i));
+    set(gca,'YTick',1:numel(d_m_unshuf(i).rows),'YTickLabels',...
+        flip(d_m_unshuf(i).rows),'FontSize',8,'TickLength',[0 0],...
+        'XTick',1:numel(d_m_unshuf(i).cols),'XTickLabels',...
+        pretty_labels(d_m_unshuf(i).cols),...
+        'XTickLabelRotation',90);
+    
+    id_group = cellfun(@(gi,i) repmat(i,numel(gi),1),...
+        grp_idx, num2cell(1:numel(grp_idx))', 'UniformOutput', false);
+    id_group = cat(1,id_group{:});
+    
+    % create patch coordinates for groups
+    % create patches for a priori groups and assays
+    vx_groups = repmat([0;0;1;1;0],1,numel(grp_idx));
+    vy_groups = NaN(5,numel(grp_idx));
+    color_groups = jet(numel(grp_idx));
+    for j = 1:numel(grp_idx)
+        idx = [find(id_group==j,1) find(id_group==j,1,'Last')];
+        if ~isempty(idx)
+            y = [idx(1) idx([2 2])+1 idx([1 1])]';
+            y = y + 0.2.*[1;-1;-1;1;1];
+            vy_groups(:,j) = y;
+        end
+    end
+
+
+    max_y = numel(cat(1,grp_idx{:}));
+    hold on;
+    patch('YData',vx_groups-1,'XData',vy_groups-0.5,...
+        'FaceColor','flat','CData',linspace(0,1,numel(grp_idx)));
+    axis(gca,'equal','tight');
+
+end
+
+
 %% create a common sort/mapping for D1/D2 behavior x pathway heatmaps
+%{
+for i=1:numel(d_m_unshuf)
+    d_m_unshuf(i).cols = standardize_fieldnames(d_m_unshuf(i).cols);
+end
 
 % unique rows
 u_rows = unique(cat(1,d_m_unshuf.rows));
@@ -193,22 +286,38 @@ rows_shared = arrayfun(@(d) ...
     cellfun(@(s) any(strcmp(d.rows,s)), u_rows),...
     d_m_unshuf, 'UniformOutput', false);
 rows_shared = u_rows(all(cat(2,rows_shared{:})'));
+cols_shared = arrayfun(@(d) ...
+    cellfun(@(s) any(strcmp(d.cols,s)), u_cols),...
+    d_m_unshuf, 'UniformOutput', false);
+cols_shared = u_cols(all(cat(2,cols_shared{:})'));
 
 % sort rows common to all based on first dataset
-idx_to_sort = find(cellfun(@(s) any(strcmp(s,rows_shared)), d_m_unshuf(1).rows));
-[p_row,p_col] = get_cluster_perm(d_m_unshuf(1).data(idx_to_sort,:),'complete','cityblock');
-sorted_rows = flip(d_m_unshuf(1).rows(idx_to_sort(p_row)));
-sorted_cols = d_m_unshuf(1).cols(p_col);
+row_idx_to_sort = find(cellfun(@(s) any(strcmp(s,rows_shared)), d_m_unshuf(1).rows));
+col_idx_to_sort = find(cellfun(@(s) any(strcmp(s,cols_shared)), d_m_unshuf(1).cols));
+[p_row,p_col] = get_cluster_perm(d_m_unshuf(1).data(row_idx_to_sort,col_idx_to_sort),'complete','cityblock');
+sorted_rows = flip(d_m_unshuf(1).rows(row_idx_to_sort(p_row)));
+sorted_cols = d_m_unshuf(1).cols(col_idx_to_sort(p_col));
 
 for i=1:numel(d_m_unshuf)
     d = d_m_unshuf(i);
     unsorted_row_idx = find(~ismember(d.rows,sorted_rows));
-    p_row = get_cluster_perm(d.data(unsorted_row_idx,:),'complete','cityblock');
+    unsorted_col_idx = find(~ismember(d.cols,sorted_cols));
+    if numel(unsorted_col_idx)>1
+        [p_row,p_col] = get_cluster_perm(d.data(unsorted_row_idx,unsorted_col_idx),'complete','cityblock');
+    else
+        p_row = get_cluster_perm(d.data(unsorted_row_idx,:),'complete','cityblock');
+        p_col = 1;
+    end
     sorted_rows = cat(1,sorted_rows,flip(d.rows(unsorted_row_idx(p_row))));
+    sorted_cols = cat(1,sorted_cols,flip(d.cols(unsorted_col_idx(p_col))));
     
     p_row = cellfun(@(s) find(strcmp(d.rows,s)), sorted_rows,'UniformOutput',false);
+    p_col = cellfun(@(s) find(strcmp(d.cols,s)), sorted_cols,'UniformOutput',false);
     sorted_row_mask = ~cellfun(@isempty,p_row);
-    d_sorted.data(sorted_row_mask,:,i) = d.data(cat(1,p_row{:}),p_col);
+    sorted_row_mask = cat(1,sorted_row_mask,false(numel(u_rows)-numel(sorted_row_mask),1));
+    sorted_col_mask = ~cellfun(@isempty,p_col);
+    sorted_col_mask = cat(1,sorted_col_mask,false(numel(u_cols)-numel(sorted_col_mask),1));
+    d_sorted.data(sorted_row_mask,sorted_col_mask,i) = d.data(cat(1,p_row{:}),cat(1,p_col{:}));
 end
 d_sorted.rows = sorted_rows;
 d_sorted.cols = sorted_cols;
@@ -227,9 +336,11 @@ for i=1:numel(d_m_unshuf)
         'YTick',1:numel(d_sorted.cols),'YTickLabels',...
         pretty_labels(d_sorted.cols),'FontSize',8,'TickLength',[0 0]);
 end
+%}
 
 %%
 
+%{
 % plot matrices
 figure;
 for i=1:numel(d_m_unshuf)
@@ -282,7 +393,7 @@ for i=1:numel(d_m_shuf)
         pretty_labels(d_m_unshuf(i).cols(p_cols)),'FontSize',8,'TickLength',[0 0]);
 end
 
-
+%}
 %% read in data
 
 fpaths = recursiveSearch(fdir,'ext','.csv','keyword','d');
@@ -404,7 +515,7 @@ for j = 1:numel(bg_path)
 end
 
 %%
-
+%{
 gene_hits.fbgn = cell(numel(has_match),1);
 gene_hits.kegg = cell(numel(has_match),1);
 gene_hits.name = cell(numel(has_match),1);
@@ -433,8 +544,12 @@ for i=1:numel(cats{idx})
     fprintf('%s\n',cats{idx}{i});
     fprintf('%s\n\n',cat_genes{i});
 end
+%}
 
 %%
+
+load(['C:\Users\winsl0w\Documents\decathlon\decathlon_paper_code\'...
+    'decathlon\gene_expression\id_conversion_data\kegg_pathway_lookup.mat']);
 
 D_enrichment_results = repmat(struct(...
     'experiment',[],'isogenic',[],'prob_gene_given_cat',[],...
@@ -448,10 +563,26 @@ for i=1:numel(D_enrichment_results)
     D_enrichment_results(i).isogenic = is_iso(i);
     D_enrichment_results(i).prob_gene_given_cat = data{i};
     D_enrichment_results(i).cat_labels = cats{i};
-    D_enrichment_results(i).gene_labels = gene_hits(i).name;
-    D_enrichment_results(i).gene_kegg_ids = gene_hits(i).kegg;
-    D_enrichment_results(i).gene_fb_gene_num = gene_hits(i).fbgn;
+    D_enrichment_results(i).gene_labels = convert_gene_ids(genes{i},'kegg','name');
+    D_enrichment_results(i).gene_kegg_ids = genes{i};
+    D_enrichment_results(i).gene_fb_gene_num = convert_gene_ids(genes{i},'kegg','fbgn');
     D_enrichment_results(i).avg_min_pval = flip(d_p_unshuf(i).data);
     D_enrichment_results(i).avg_metrics_hit = flip(d_n_unshuf(i).data);
+    
+    
+    [a,b] = ismember(cats{i},kegg_pathway_lookup.name);
+    D_enrichment_results(i).cat_id = cell(numel(cats),1);
+    D_enrichment_results(i).cat_id(a) = kegg_pathway_lookup.id(b(a));
+    D_enrichment_results(i).cat_genes = cell(numel(cats),1);
+    for j=1:numel(cats{i})
+        D_enrichment_results(i).cat_genes{j} = genes{i}(data{i}(j,:)>0);  
+    end
+    D_enrichment_results(i).p_metric = flip(d_m_unshuf(i).data);
+    D_enrichment_results(i).metric_labels = d_m_unshuf(i).cols;
 end
 
+%%
+
+for i=1:numel(D_enrichment_results)
+    D_enrichment_results(i).shuffled_avg_min_pval = d_p_shuf(i).data;
+end
