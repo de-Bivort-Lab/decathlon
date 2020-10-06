@@ -1,31 +1,7 @@
-function plot_all_tsne(data,varargin)
 
-% set defaults
-color = [];
-labels = [];
-plot_opt = {};
-distance_type = 'euclidean';
-
-% parse optional inputs
-for i=1:numel(varargin)
-    arg = varargin{i};
-    if ischar(arg)
-       switch arg
-           case 'Color'
-               i = i + 1;
-               color = varargin{i};
-           case 'Labels'
-               i = i + 1;
-               labels = varargin{i};
-           case 'PlotOptions'
-               i = i + 1;
-               plot_opt = varargin{i};
-           case 'Distance'
-               i = i + 1;
-               distance_type = varargin{i};
-       end   
-    end
-end
+fdir = uigetdir(pwd,'Select decathlon_paper_data directory');
+D=load_decathlon_structs(fdir,'D_als_filled_batch_merged');
+D_p = pair_decathlon_structs(D);
 
 
 fh = figure;
@@ -33,23 +9,20 @@ dist_type = 'euclidean';
 perplex = 8;
 batch = {'D12';'D3'};
 leg_loc = 'NorthEast';
-fdir = 'D:\decathlon_data_and_analysis\decathlon_analysis\figures\multidimensional_scaling\';
-fname = sprintf('D12_D3_tsne_perplex%i_%s.fig',perplex,dist_type);
 ncol = 3;
 opts = statset;
 opts.MaxIter = 5000;
 opts.TolFun = 1E-12;
 
 % Initialize color variables
+[apriori_data, apriori_names, p] = group_apriori_fields(D_p(i));
 hsv_color = ones(numel(apriori_data),3);
 hue = linspace(0,1,numel(apriori_data)+1);
 hsv_color(:,1) = hue(1:numel(apriori_data));
 hsv_color(:,2) = rand(numel(apriori_data),1).*.75 + .25;
 rgb_color = hsv2rgb(hsv_color);
 
-D=load_decathlon_structs;
-D_p = pair_decathlon_structs(D);
-D_p = cat_decathlon_structs(D_p);
+
 for i=1:numel(D_p)
 
     ah = subplot(2,ncol,(i-1)*ncol+1);
