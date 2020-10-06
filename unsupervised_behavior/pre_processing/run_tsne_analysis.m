@@ -1,6 +1,6 @@
 
 % select directory containing .mat files containing embedding data
-fDir = uigetdir('select directory containing .mat files with embedding data');
+fDir = uigetdir('Select decathlon_embedding_data directory');
 
 % generate embedding data struct from data files
 embedding = build_embedding_data_struct(fDir);
