@@ -140,7 +140,7 @@ for i=1:numel(frac_missing)
     pretty_scatter(gt,infilled,'k','MarkerSize',2);
     ylabel('imputed');
     xlabel('ground truth');
-    title(sprintf('frac. missing = %0.2f, r = %0.2f',frac_missing(i),r(1,2)));
+    title(sprintf('frac. missing = %0.2f, r = %0.2f',frac_missing(i),r1(1,2)));
     axis('equal');
     legend({sprintf('cluster r=%0.2f',r1(1,2));...
         sprintf('non-cluster r=%0.2f',r2(1,2))});
