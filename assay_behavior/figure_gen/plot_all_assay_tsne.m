@@ -30,7 +30,7 @@ for i=1:numel(D_p)
     % caluclate fraction missing
     pct_miss = zeros(size(D_p(i).data,1),1);
     pct_miss(383:end) = 1;
-    embedded_data = tsne(D_p(i).data,'Distance',dist_type,'Perplexity',20,'Algorithm','exact','Options',opts);
+    embedded_data = tsne(D_p(i).data,'Distance',dist_type,'Perplexity',perplex,'Algorithm','exact','Options',opts);
     scatter(embedded_data(:,1),embedded_data(:,2),12,pct_miss,'filled');
     title(sprintf('t-SNE %s - individuals (%s)',dist_type,batch{i}));
     cb = colorbar;

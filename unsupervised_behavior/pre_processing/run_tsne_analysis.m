@@ -1,9 +1,8 @@
 
 % select directory containing .mat files containing embedding data
-fDir = uigetdir('Select decathlon_embedding_data directory');
-
-% generate embedding data struct from data files
-embedding = build_embedding_data_struct(fDir);
+[fname,fpath] = uigetfile('Select decathlon_unsupervised_embedding_timeseries.mat');
+embedding = load(cat(2,fpath,fname));
+embedding = embedding.embeddings;
 
 % find t-SNE speed threshold for parsing t-SNE trajectories into pauses at modes
 make_plot = true;

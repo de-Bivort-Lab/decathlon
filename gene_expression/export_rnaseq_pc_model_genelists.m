@@ -1,7 +1,8 @@
 
 % load behavioral data
 fdir = uigetdir(pwd,'Select the decathlon_paper_data directory');
-D_b = load_decathlon_structs(fdir,'D_als_filled');
+%%
+D_b = load_decathlon_structs(fdir,'D_als_filled_batch_merged');
 
 % get field sorting order
 for i=1:numel(D_b)
@@ -20,6 +21,13 @@ for i=1:numel(D_b)
 end
 
 
+D_b = pair_decathlon_structs(D_b,'CollapseMode','PCA',...
+    'CollapseFields','all','imputeMode','none');
+D_b = [D_b(1); D_b];
+D_b(1).data = D_b(2).data(1:190,:);
+D_b(2).data = D_b(2).data(191:end,:);
+
+
 % insert missing individual data into D1 struct
 f = true(192,1);
 f([99 114])=false;
@@ -27,6 +35,7 @@ d = NaN(size(D_b(1).data));
 d(f,:) = D_b(1).data;
 D_b(1).data = d;
 
+%%
 % set rnaseq preprocessing params and pre-process
 min_tot_reads = 1E6;
 min_rpm = 16;
@@ -61,19 +70,16 @@ for i=1:numel(model_p_value)
     %subplot(numel(model_p_value),2,(i-1)*2+1);
     p = -log10(model_p_value{i})';
     p(isnan(p)) = 0;
-    
-    [~, ~, grp_idx] = group_apriori_fields(D_b(i));
-    grp_idx = cat(1,grp_idx{:});
     [~,g_perm] = sort(nanmean(p),'descend');
 
     subplot(2,2,1);
-    bar(sum(p(grp_idx,g_perm)>2),'EdgeColor','none','FaceColor','k');
+    bar(sum(p(:,g_perm)>2),'EdgeColor','none','FaceColor','k');
     
     subplot(2,2,4);
-    barh(sum(p(grp_idx,g_perm)>2,2),'EdgeColor','none','FaceColor','k');
+    barh(sum(p(:,g_perm)>2,2),'EdgeColor','none','FaceColor','k');
 %     
     subplot(2,2,3);
-    imagesc(p(grp_idx,g_perm));
+    imagesc(p(:,g_perm));
     colormap(flip(bone,1));
     caxis([0 3]);
     colorbar;
@@ -104,8 +110,7 @@ end
 % Export observed model hits
 for i=1:numel(model_p_value)
     fname = sprintf('%sobs_data/D%i_pval_obs.csv',save_dir,i);
-    [~, ~, grp_idx] = group_apriori_fields(D_b(i));
-    pvals = model_p_value{i}(has_kegg_gid,cat(1,grp_idx{:}));
+    pvals = model_p_value{i}(has_kegg_gid,:);
     write_csv_mat(fname,pvals<alpha,grp_idx,grp_name,bg_kegg_ids);
 end
 

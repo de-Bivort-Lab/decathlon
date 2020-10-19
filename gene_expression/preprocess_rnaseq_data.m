@@ -23,8 +23,8 @@ for i=1:numel(reads)
     
     % normalize to reads per million
     tot_reads = sum(reads{i},2);
-    scale_factor = tot_reads ./ min(tot_reads);
-    reads{i} = reads{i} ./ repmat(scale_factor,1,size(reads{i},2));
+    scale_factor = 1E6 ./ tot_reads;
+    reads{i} = reads{i} .* repmat(scale_factor,1,size(reads{i},2));
 end
 
 % combine reads across batches and quantile normalize reads
