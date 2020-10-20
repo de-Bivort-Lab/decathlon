@@ -3,7 +3,7 @@
 
 # import cluster profiler
 library('clusterProfiler')
-source("decathlon/decathlon_paper_code/decathlon/gene_expression/decathlon_enrich_utils.R")
+source("decathlon/decathlon_paper_code/gene_expression/decathlon_enrich_utils.R")
 
 # EDIT FILE PATH to set the current working directory to RNAseq_bootstrap folder
 input_path = choose.dir(default = "", caption = "Select RNAseq_bootstrap folder");
