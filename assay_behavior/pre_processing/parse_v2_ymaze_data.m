@@ -8,6 +8,7 @@ cen_next = [flyTracks.centroid(2:size(cen,1),:,:); NaN(1,2,size(cen,3))];
 cen = cat(4,cen_previous,cen_current,cen_next);
 cen = nanmean(cen,4);
 speed = calculate_speed(cen,flyTracks.tStamps);
+speed(isinf(speed)) = NaN;
 [idx,lag_thresh,spd_thresh,fh] = blockActivity_v2(speed);
 
 % record bout metrics
@@ -78,7 +79,7 @@ end
 turns.bout_clumpiness = bout_clumpiness;
 turns.nBouts = nBouts;
 turns.bout_length = bout_length;
-turns.speed = mean_speed;
+turns.speed = nanmean(speed);
 
 fn = fieldnames(turns);
 for i=1:numel(fn)

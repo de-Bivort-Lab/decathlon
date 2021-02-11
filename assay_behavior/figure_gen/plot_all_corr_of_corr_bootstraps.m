@@ -2,10 +2,10 @@
 % matrices to themselves and each other via bootstrapping raw data
 
 % define data file path and load decathlon data
-fdir = '';
-D = load_decathlon_structs(fdir,'D13_als');
+fdir = uigetdir('Select decathlon data directory');
+D = load_decathlon_structs(fdir,'D_als_filled_batch_merged');
 
-% iterate over different collapsed matrix representations
+%% iterate over different collapsed matrix representations
 figure('Name','correlation of decathlon r-values');
 n_modes = 2;
 num_reps = 50;

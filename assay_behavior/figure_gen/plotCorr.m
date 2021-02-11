@@ -11,7 +11,7 @@ plot_title = '';
 signed = true;
 ext = {'.fig'};
 alpha = 0.01;
-corr_type = 'spearman';
+corr_type = 'pearson';
 corr_opts = {'rows';'pairwise'};
 pval_patch = true;
 parent = [];
@@ -62,7 +62,7 @@ for i=1:length(varargin)
 end
 
 % calculate covariance matrix
-[r,p] = corr(data,'Type',corr_type,corr_opts{:});
+[r,p] = corrcoef(data,corr_opts{:});
 
 % replace NaNs
 r(isnan(r))=0;

@@ -6,8 +6,7 @@ function D = collapseMetrics(D,varargin)
 % parse inputs
 mode = 'PCA';
 fields = 'circadian';
-PCs = 2;
-grp_path = 'D:\decathlon_data_and_analysis\decathlon 8-2017\meta\apriori_groups.mat';
+PCs = 'threshold';
 for i=1:length(varargin)
     
     arg = varargin{i};
@@ -90,8 +89,13 @@ switch lower(fields)
                     cellfun(@pca,apriori_data,'UniformOutput',false);
    
                 % determine number of PCs to keep from variance cutoff threshold
-                npcs = cellfun(@(ex,ci) find(ex>=ci,1,'Last'), ...
-                    explained, low_ci_bound,'UniformOutput', false);
+                if strcmp(PCs,'threshold')
+                    npcs = cellfun(@(ex,ci) find(ex>=ci,1,'Last'), ...
+                        explained, low_ci_bound,'UniformOutput', false);
+                else
+                    npcs = cellfun(@(ex,ci) numel(ci), ...
+                        explained, low_ci_bound,'UniformOutput', false);
+                end
                 npcs(cellfun(@isempty,npcs)) = {1};
                 npcs = cat(1,npcs{:});
                 

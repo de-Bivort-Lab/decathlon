@@ -9,7 +9,8 @@ D_p = pair_decathlon_structs(D,opts{:});
 %%
 
 save_dir = 'C:\Users\winsl0w\Documents\decathlon\decathlon_analysis\figures\pca_loadings\';
-plot_pca_loadings(D_p,'SaveDir',save_dir);
+
+plot_pca_loadings(D_p(1),'SaveDir',save_dir);
 
 fig_paths = recursiveSearch(save_dir,'ext','.fig');
 for i=1:numel(fig_paths)

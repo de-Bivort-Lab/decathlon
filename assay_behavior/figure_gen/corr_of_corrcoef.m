@@ -18,6 +18,8 @@ for i=1:numel(varargin)
 	end
 end
 
+% filter out 
+
 % compute correlation matrix
 [A.r,A.p] = corrcoef(A.data,'rows','pairwise');
 [B.r,B.p] = corrcoef(B.data,'rows','pairwise');
@@ -28,10 +30,18 @@ end
 L=1:length(A.r);
 subset = arrayfun(@(x) [L(L<x)' repmat(x,sum(L<x),1)],L,'UniformOutput',false);
 subset = cat(1,subset{:});
+
+% if apriori groups, remove correlations from within block PCs
+if any(regexp(A.fields{1},'\(PC'))
+    apriori_grp = regexp(A.fields,'\w+','match');
+    apriori_grp = cellfun(@(g) cat(2,g{1:numel(g)-1}), apriori_grp, 'UniformOutput', false);
+    same_apriori = arrayfun(@(i,j) strcmp(apriori_grp{i},apriori_grp{j}), subset(:,1), subset(:,2));
+    subset(same_apriori,:) = []; 
+end
 subset = sub2ind(size(A.r),subset(:,1),subset(:,2));
 
 % calculate correlation of r-values
-[r,p] = corrcoef([A.r(subset),B.r(subset)],'rows','pairwise');
+[r,p] = corrcoef(A.r(subset),B.r(subset),'rows','pairwise');
 
 if doplot
     ah=gca;
