@@ -98,7 +98,7 @@ else
 end
 
 % configure corr mat axes
-colormap(ah1,egoalley);
+colormap(ah1,nanticoke);
 colorbar(ah1);
 set(ah1,'TickLength',[0 0]);    
 

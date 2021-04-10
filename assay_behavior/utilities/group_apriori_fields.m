@@ -1,6 +1,14 @@
 function [apriori_grouped, apriori_group_names, grp_idx] = group_apriori_fields(D)
 
 
+if iscell(D)
+    fields = D;
+    D = struct();
+    D.data = NaN(1,numel(fields));
+    D.fields = fields;
+end
+   
+
 % define keywords for clustering groups
 group_keywords = [{{'speed';'nTrials';'nBouts';'bout_length'}};...
     {{'bout_clumpiness'}};...

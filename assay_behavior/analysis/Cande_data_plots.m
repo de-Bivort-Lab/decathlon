@@ -12,21 +12,21 @@ for i=1:4
     switch i
         case 1 
             %data = DN_exp.line_avg_off_pdfs;
-            data = DN_exp.dn_avg_off_pdfs;
+            data = DN_exp.line_avg_off_pdfs;
             cluster = true;
             p=1:size(DN_ctl.line_avg_off_pdfs,2);
         case 2 
             %data = DN_exp.line_avg_on_pdfs;
-            data = DN_exp.dn_avg_on_pdfs;
+            data = DN_exp.line_avg_on_pdfs;
             cluster = false;
             p=p_out;
         case 3 
             %data = DN_ctl.line_avg_off_pdfs;
-            data = DN_ctl.dn_avg_off_pdfs;
+            data = DN_ctl.line_avg_off_pdfs;
             cluster = false;
         case 4
             %data = DN_ctl.line_avg_on_pdfs;
-            data = DN_ctl.dn_avg_on_pdfs;
+            data = DN_ctl.line_avg_on_pdfs;
             cluster = false;
     end
     
@@ -44,55 +44,18 @@ for i=1:4
     effective_dims(i) = nkeep;
 end
 
-%% Compute the effective dimensionality of individual behaviors in each line separately
-
-k_effective = NaN(numel(unique_DNs),4);
-fh = figure;
-for i=1:numel(unique_DNs)
-    
-    fprintf('iteration %i of %i\n',i,numel(unique_DNs));
-    
-    d = exp_off_pdfs{i}(~any(isnan(exp_off_pdfs{i}),2),:);
-    [~,~,k_effective(i,1),ph] = plot_pca_bootstrap(d,100,95,'noncummulative',[.7 .7 .7]);
-    cellfun(@delete,ph);
-    
-    d = exp_on_pdfs{i}(~any(isnan(exp_on_pdfs{i}),2),:);
-    [~,~,k_effective(i,2),ph] = plot_pca_bootstrap(d,100,95,'noncummulative',[.7 .7 .7]);
-    cellfun(@delete,ph);
-
-    d = ctl_off_pdfs{i}(~any(isnan(ctl_off_pdfs{i}),2),:);
-    [~,~,k_effective(i,3),ph] = plot_pca_bootstrap(d,100,95,'noncummulative',[.7 .7 .7]);
-    cellfun(@delete,ph);
-
-    d = ctl_on_pdfs{i}(~any(isnan(ctl_on_pdfs{i}),2),:);
-    [~,~,k_effective(i,4),ph] = plot_pca_bootstrap(d,100,95,'noncummulative',[.7 .7 .7]);
-    cellfun(@delete,ph);
-end
-delete(fh);
-
-figure;
-k_effective = k_effective(~any(isnan(k_effective),2),:);
-ci = [bootstrap_mean_CI(k_effective,0.05,100)';NaN(1,size(k_effective,2))];
-vx = [repmat(1:size(k_effective,2),2,1);NaN(1,size(k_effective,2))];
-bar(mean(k_effective)); hold on;
-plot(vx(:),ci(:),'k-','LineWidth',1);
-ylabel('effective dimensionality');
-set(gca,'XTick',1:size(k_effective,2),'TickLength',[0 0],...
-    'XtickLabel',labels,'Xticklabelrotation',90,'YLim',[0 5]);
-title('DN screen individual dimensionality');
-
 
 
 %% Descending Neuron Screen t-SNE plots
 
 % concatenate data matrices
-all_exp_data = zscore([DN_exp.dn_avg_off_pdfs;DN_exp.dn_avg_on_pdfs]);
-exp_off_z_data = all_exp_data(1:size(DN_ctl.dn_avg_off_pdfs,1),:);
-exp_on_z_data = all_exp_data(size(DN_ctl.dn_avg_on_pdfs,1)+1:end,:);
+all_exp_data = zscore([DN_exp.line_avg_off_pdfs;DN_exp.line_avg_on_pdfs]);
+exp_off_z_data = all_exp_data(1:size(DN_ctl.line_avg_off_pdfs,1),:);
+exp_on_z_data = all_exp_data(size(DN_ctl.line_avg_on_pdfs,1)+1:end,:);
 
-all_ctl_data = zscore([DN_ctl.dn_avg_off_pdfs;DN_ctl.dn_avg_on_pdfs]);
-ctl_off_z_data = all_ctl_data(1:size(DN_ctl.dn_avg_off_pdfs,1),:);
-ctl_on_z_data = all_ctl_data(size(DN_ctl.dn_avg_on_pdfs,1)+1:end,:);
+all_ctl_data = zscore([DN_ctl.line_avg_off_pdfs;DN_ctl.line_avg_on_pdfs]);
+ctl_off_z_data = all_ctl_data(1:size(DN_ctl.line_avg_off_pdfs,1),:);
+ctl_on_z_data = all_ctl_data(size(DN_ctl.line_avg_on_pdfs,1)+1:end,:);
 
 % initialize settings
 fh = figure;
@@ -162,7 +125,8 @@ set(gca,'XLim',[-25 25],'YLim',[-25 25]);
 set(findall(fh,'Type','axes'),'XTick',[],'YTick',[],'TickLength',[0 0]);
 savefig(fh,[fdir fname]);
 
-%% Compute effective dimensionality (connected components of correlation matrix)
+
+%% compute effective dimensionality connected components in correlation matrix
 
 D = struct('data',[],'fields',{});
 D(1).data = exp_off_z_data;
@@ -171,36 +135,73 @@ D(3).data = ctl_off_z_data;
 D(4).data = ctl_on_z_data;
 d_label = {'lights off';'lights on'};
 
+% Plot Conn comp histograms for DN experimental groups
 figure; 
 subplot(1,2,1); hold on;
 lhs = gobjects(2,1);
 colors = {[0 0 0];[1 0 0]};
 for i=1:2
     d = D(i).data;
-    [out,intrinsic_dim,~]=decathlonConnCompSweep(d,1000);
-    bins = 1:2:size(d,2);
-    cts = histc(intrinsic_dim,bins);
-    lhs(i) = bar(bins,log(cts),'EdgeColor','none',...
-        'FaceColor',colors{i},'FaceAlpha',0.5);
-    ylabel('log(count)');
-    xlabel('effective dimensionality');
+    nfeat = size(d,2);
+    nreps = 100;
+    nflies = size(d,1);
+    
+    comp_cts = zeros(nreps);
+    for j=1:nreps
+        if mod(j,10)==0
+           fprintf('Conn. comp. simulation %i of %i\n',j,nreps); 
+        end
+        dd = d(randi(nflies,[nflies 1]),:);
+
+        % compute conn comp spectrum
+        comp_cts(j,:) = conn_comp_spectrum(corr(dd),nreps);
+    end
+    
+    cts = histc(comp_cts(:),1:nfeat);
+    lhs(i) = bar(1:nfeat,log10(cts),'FaceColor',colors{i},'EdgeColor','none');
+    xlabel('conn. comp');
+    ylabel('log(counts)');
+    drawnow;
+    ah = gca;
+    ah.Units = 'inches';
+    ah.Position(3:4) = [2 1];
+    drawnow;
 end
 set(gca,'XLim',[0 size(d,2)]);
 legend(lhs,d_label);
 title('DN screen (experimentals)');
 
+
+% Plot Conn comp histograms for DN controls
 subplot(1,2,2); hold on;
 lhs = gobjects(2,1);
 colors = {[0 0 0];[1 0 0]};
 for i=1:2
     d = D(i+2).data;
-    [out,intrinsic_dim,~]=decathlonConnCompSweep(d,1000);
-    bins = 1:2:size(d,2);
-    cts = histc(intrinsic_dim,bins);
-    lhs(i) = bar(bins,log(cts),'EdgeColor','none',...
-        'FaceColor',colors{i},'FaceAlpha',0.5);
-    ylabel('log(count)');
-    xlabel('effective dimensionality');
+    nfeat = size(d,2);
+    nreps = 100;
+    nflies = size(d,1);
+    
+    comp_cts = zeros(nreps);
+    for j=1:nreps
+        if mod(j,10)==0
+           fprintf('Conn. comp. simulation %i of %i\n',j,nreps); 
+        end
+        dd = d(randi(nflies,[nflies 1]),:);
+
+        % compute conn comp spectrum
+        comp_cts(j,:) = conn_comp_spectrum(corr(dd),nreps);
+    end
+    
+    cts = histc(comp_cts(:),1:nfeat);
+    lhs(i) = bar(1:nfeat,log10(cts),'FaceColor',colors{i},'EdgeColor','none');
+    xlabel('conn. comp');
+    ylabel('log(counts)');
+    drawnow;
+    ah = gca;
+    ah.Units = 'inches';
+    ah.Position(3:4) = [2 1];
+    drawnow;
 end
 set(gca,'XLim',[0 size(d,2)]);
 legend(lhs,d_label);

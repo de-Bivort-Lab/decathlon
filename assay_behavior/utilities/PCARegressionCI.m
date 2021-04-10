@@ -6,7 +6,7 @@ function out=PCARegressionCI(data,ah,varargin)
 % performs bootstrap resampling of this regression to determine the
 % confidence interval of the regression line.
 
-r=3.5;
+r=4;
 xlim = [-r r];
 ylim = [-r r];
 plotBool=true;     % make a figure at the end?
@@ -34,7 +34,7 @@ CI=95;          % confidence interval to be estimated
 numPts=size(data,1);
 
 % generate points for line and CI
-numXs=3;
+numXs=100;
 minX=min(data(:,1));
 maxX=max(data(:,1));
 
@@ -81,7 +81,7 @@ end
 
 % make a figure if plotBool==1.
 if plotBool==1
-    hold on;
+    hold(ah,'on');
     opts = {'Marker'; 'o'; 'LineStyle'; 'none';...
     'MarkerEdgeColor'; 'none';'MarkerSize'; 1.5; 'LineWidth'; 1};
     patch([xPts fliplr(xPts)],[out.lower fliplr(out.upper)],[0 0 0],...

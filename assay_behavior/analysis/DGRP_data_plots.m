@@ -2,59 +2,22 @@
 % Load the DGRP data matrices (D_dgrp_behavior and D_dgrp_phys) before running.
 
 % plot behavioral correlation matrix
-fh=plotCorr(D_dgrp_behavior.data,'Labels',D_dgrp_behavior.fields,'Patch',false);
-delete(fh(2)); figure(fh(1));
+plotCorr(D_dgrp_behavior.data,'Labels',D_dgrp_behavior.fields,'Patch',false);
 axis('equal','tight');
 title('DGRP behavioral corr mat');
-
-% plot cross validation results
-k_folds = 20;
-figure('Name','DGRP data dimensional analysis');
-subplot(1,2,1);
-[tr,te,~] = cross_validate_pca(D_dgrp_behavior.data,'KFolds',k_folds,'TestSize',0.1);
-[~,mi] = min(mean(te,2));
-title(sprintf('thresh = %i',mi)); 
 
 % scree plot
 subplot(1,2,2);
 [~,~,nkeep] = plot_pca_bootstrap(D_dgrp_behavior.data,100,95,'noncummulative',[.7 .7 .7]);
-set(gca,'YLim',[1E-2 1E2],'XLim',[1 100]);
+set(gca,'YLim',[1E-2 1E2],'XLim',[1 size(D_dgrp_behavior.data,2)]);
 title(sprintf('thresh = %i',nkeep));
 
 %% plots for physiological/molecular measurements
 
-% separate behavioral measurements from full data set
-bio_fields = dFields(~is_behavior);
-bio_data = data(:,~is_behavior);
-split_fields = regexp(bio_fields,' (?=[M|F])','split');
-split_fields = cellfun(@(s) s{1}, split_fields, 'UniformOutput', false);
-unique_fields = unique(split_fields(:,1));
-dup_fields = num2cell(str_list_contains(split_fields(:,1),unique_fields),1);
-unique_field_avgs = cellfun(@(df) nanmean(bio_data(:,df),2),...
-    dup_fields, 'UniformOutput', false);
-bio_data = cat(2,unique_field_avgs{:});
-
-% build decathlon style data struct for DGRP data
-D_m.data = bio_data;
-D_m.fields = unique_fields;
-
-% impute missing data via ALS
-D_m = standardize_by_field(D_m);
-D_dgrp_phys = avg_als_impute(D_m,200);
-
 % plot behavioral correlation matrix
-fh=plotCorr(D_dgrp_phys.data,'Labels',D_dgrp_phys.fields,'Patch',false);
-delete(fh(2)); figure(fh(1));
+plotCorr(D_dgrp_phys.data,'Labels',D_dgrp_phys.fields,'Patch',false);
 axis('equal','tight');
 title('DGRP physiological corr mat');
-
-% plot cross validation results
-k_folds = 20;
-figure('Name','DGRP phys data dimensional analysis');
-subplot(1,2,1);
-[tr,te,~] = cross_validate_pca(D_dgrp_phys.data,'KFolds',k_folds,'TestSize',0.1);
-[~,mi] = min(mean(te,2));
-title(sprintf('thresh = %i',mi)); 
 
 % scree plot
 subplot(1,2,2);
@@ -64,64 +27,42 @@ title(sprintf('thresh = %i',nkeep));
 
 %% combined analysis on both behavioral and physiological data
 
-D_dgrp_comb_als.data = cat(2,D_dgrp_behavior.data,D_dgrp_phys.data);
-D_dgrp_comb_als.fields = cat(1,D_dgrp_behavior.fields,D_dgrp_phys.fields);
-
-% plot behavioral correlation matrix
-fh=plotCorr(D_dgrp_comb_als.data,'Labels',D_dgrp_comb_als.fields,'Patch',false);
-delete(fh(2)); figure(fh(1));
-axis('equal','tight');
-title('DGRP behavior & physiological corr mat');
-
-% plot cross validation results
-k_folds = 20;
-figure('Name','DGRP combined data dimensional analysis');
-subplot(1,2,1);
-[tr,te,~] = cross_validate_pca(D_dgrp_comb_als.data,'KFolds',k_folds,'TestSize',0.1);
-[~,mi] = min(mean(te,2));
-title(sprintf('thresh = %i',mi)); 
-
-% scree plot
-subplot(1,2,2);
-[~,~,nkeep] = plot_pca_bootstrap(D_dgrp_comb_als.data,100,95,'noncummulative',[.7 .7 .7]);
-set(gca,'YLim',[1E-2 1E2],'XLim',[1 numel(D_dgrp_comb_als.fields)]);
-title(sprintf('thresh = %i',nkeep));
-
-
-% dimensionality plots (n-drop scree intersection)
-subplot(1,2,1);
-max_reps = 50;
-z_data = zscore(D_dgrp_behavior.data);
-plot_pca_n_drop_scree(z_data,max_reps);
-title('DGRP behavior');
-axis('equal','tight');
-
-subplot(1,2,2);
-max_reps = 50;
-z_data = zscore(D_dgrp_phys.data);
-plot_pca_n_drop_scree(z_data,max_reps);
-title('DGRP physiology');
-axis('equal','tight');
-
 % dimensionality plots (connected components log-hist)
 figure;
 D = [D_dgrp_behavior; D_dgrp_phys];
+d_label = {'DGRP behavior data';'DGRP physiological data'};
 lhs = gobjects(numel(D),1);
 for i=1:numel(D)
-    d = D(i).data;
-    [out,intrinsic_dim,~]=decathlonConnCompSweep(d,1000);
-
     subplot(1,2,i);
-    bins = 1:size(d,2);
-    cts = histc(intrinsic_dim,bins);
-    lhs(i) = bar(bins,log(cts),'EdgeColor','none','FaceColor','k');
-    ylabel('log(count)');
-    xlabel('effective dimensionality');
-    set(gca,'YLim',[0 7]);
-end
-set(gca,'XLim',[0 size(d,2)]);
-legend(lhs,d_label);
+    d = D(i).data;
+    nfeat = size(d,2);
+    nreps = 100;
+    nflies = size(d,1);
+    
+    comp_cts = zeros(nreps);
+    for j=1:nreps
+        if mod(j,10)==0
+           fprintf('Conn. comp. simulation %i of %i\n',j,nreps); 
+        end
+        dd = d(randi(nflies,[nflies 1]),:);
 
+        % compute conn comp spectrum
+        comp_cts(j,:) = conn_comp_spectrum(corr(dd),nreps);
+    end
+    
+    cts = histc(comp_cts(:),1:nfeat);
+    lhs(i) = bar(1:nfeat,log10(cts),'FaceColor',[.65 .65 .65],'EdgeColor','none');
+    xlabel('conn. comp');
+    ylabel('log(counts)');
+    drawnow;
+    ah = gca;
+    ah.Units = 'inches';
+    ah.Position(3:4) = [2 1];
+    title(d_label{i});
+    drawnow;
+end
+
+%%
 
 % DGRP t-SNE plots
 fh = figure;

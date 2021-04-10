@@ -36,7 +36,7 @@ end
 ah = gca;
 line_handles = [];
 for i=1:size(pairs,1)
-    [~,~,lh] = autoPlotDist(r_bs(:,i),true(size(r_bs(:,i))),ah);
+    lh = plot_kde(r_bs(:,i),ah,[-1 1],ah.ColorOrder(i,:));
     line_handles = [line_handles; lh];
 end
 

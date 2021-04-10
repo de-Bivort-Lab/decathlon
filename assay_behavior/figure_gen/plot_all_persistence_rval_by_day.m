@@ -60,7 +60,7 @@ for i =1:numel(data_by_metric)
     ah = gca;
     set(ah,'YTick',yticks,'YTickLabels',pretty_labels(rval_labels{i}(p)),...
         'Clipping','off','Units','inches', 'FontSize',8);
-    ah.Position(3:4) = [2 2];
+    ah.Position(3:4) = [1.5 1.5];
     
     vx = repmat([.5;.5;.25;.25;.5],1,numel(rval_labels{i}));
     vy = repmat([0;step_sz,;step_sz;0;0],1,numel(rval_labels{i}));
@@ -68,17 +68,23 @@ for i =1:numel(data_by_metric)
     patch('XData',vx,'YData',vy,'FaceColor','k');
     title(assay_labels{i});
     axis('equal','tight');
+    
+    saveas(gcf,sprintf('%s_persistence_mat.fig',assay_labels{i}));
+    saveas(gcf,sprintf('%s_persistence_mat.pdf',assay_labels{i}));
+    close(gcf);
 end
 
 %% generate an r-value plot for each assay, with a line for each metric as a function of days between
 
 fh = gobjects(numel(rval_labels),1);
 ahs = cellfun(@(r) gobjects(numel(r),1), rval_labels, 'UniformOutput', false);
+rval_lines = cell(numel(rval_labels),1);
 for i=1:numel(rval_labels)
     fh(i) = figure('Name',assay_labels{i},'Units','inches');
     hold on;
     p = metric_permutation{i};
     d=data_by_metric{i}(p);
+    rval_lines{i} = NaN(numel(rval_labels{i}),9);
     for j=1:numel(rval_labels{i})
         ahs{i}(j) = subplot(2,5,j);
         nreps = 100;
@@ -89,6 +95,7 @@ for i=1:numel(rval_labels)
            ci95(rep,:) = arrayfun(@(num_r) nanmean(diag(bs_r,num_r)), 1:size(bs_r,1)-1);
         end
         rval_line = mean(ci95);
+        rval_lines{i}(p(j),:) = rval_line(1:9);
         ci95 = [prctile(ci95,97.5);prctile(ci95,2.5)];
         xx = linspace(-1,1,numel(rval_line));
         hold on;
@@ -101,18 +108,18 @@ for i=1:numel(rval_labels)
         set(ahs{i}(j),'YLim',[-1 1],'XLim',[-1 1],'XTick',xx(2:2:end),...
             'XTickLabel',2:2:numel(rval_line),'FontSize',6,'Units','inches');
         
-        xlabel('days','FontSize',7);
-        ylabel('r-value','FontSize',7);
-        title(pretty_labels(rval_labels{i}(p(j))),'FontSize',7);
+        xlabel('days','FontSize',6);
+        ylabel('r-value','FontSize',6);
+        title(pretty_labels(rval_labels{i}(p(j))),'FontSize',6);
         drawnow;
         
     end
 end
 
-step = 1.1;
+step = .8;
 for i=1:numel(rval_labels)
     for j=1:numel(rval_labels{i})
-        pos = [mod(j-1,5) + 1, 3 - ceil(j/5), .75 .75];
+        pos = [mod(j-1,5) + 1, 3 - ceil(j/5), .5 .5];
         if (3 - ceil(j/5)) > 1
             pos(2) = pos(2) + .25;
         end
@@ -120,6 +127,14 @@ for i=1:numel(rval_labels)
         pos(1:2) = pos(1:2)-.5;
         ahs{i}(j).Position = pos;
     end
+end
+
+%%
+fhs = findall(groot,'Type','Figure');
+for i=1:numel(fhs)
+    saveas(fhs(i),sprintf('%s_rval_plots.fig',assay_labels{numel(fhs)-i+1}));
+    saveas(fhs(i),sprintf('%s_tval_plots.pdf',assay_labels{numel(fhs)-i+1}));
+    close(fhs(i)); 
 end
 
 %% generate an r-value plot for each assay, with a line for each metric as a function of days between

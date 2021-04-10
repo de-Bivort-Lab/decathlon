@@ -6,8 +6,12 @@
 fdir = uigetdir(pwd,'Select decathlon_paper_data directory');
 D_thermo = load_decathlon_structs(fdir,'D_thermo');
 
+%%
 figure;
 colors = {[177 128 255]./255;[102 102 102]./255;[84 147 96]./255};
+nplots = 6;
+ax = subplot_array(nplots);
+delete(ax(3));
 
 
 % filter out most extreme points
@@ -34,7 +38,7 @@ for i=1:numel(unique_effs)
     
     % plot data at low temp
     hold(ax(1),'on');
-    pretty_scatter(x_23(eff_idx),y_23(eff_idx),colors{i},'MarkerSize',3,'Parent',ax(1));
+    pretty_scatter(x_23(eff_idx),y_23(eff_idx),colors{i},'Parent',ax(1));
     xlabel(ax(1),'Clumpiness');
     ylabel(ax(1),'Switchiness');
     r = corr([x_23 y_23],'Type','Spearman','rows','pairwise');
@@ -51,7 +55,7 @@ for i=1:numel(unique_effs)
     
     % plot data at high temp
     hold(ax(2),'on');
-    pretty_scatter(x_33(eff_idx),y_33(eff_idx),colors{i},'MarkerSize',3,'Parent',ax(2));
+    pretty_scatter(x_33(eff_idx),y_33(eff_idx),colors{i},'Parent',ax(2));
     xlabel(ax(2),'Clumpiness');
     ylabel(ax(2),'Switchiness');
     r = corr([x_33 y_33],'Type','Spearman','rows','pairwise');
@@ -76,7 +80,6 @@ for i=1:2
 end
 
 % plot r-values
-ax(4) = subplot(2,nplots,3);
 bh = bar(r_eff');
 ngroups = size(r_eff, 2);
 nbars = size(r_eff, 1);
@@ -89,19 +92,75 @@ end
 x = [x(:)'; x(:)'; NaN(1,numel(x))];
 hold on;
 plot(x(:), ci_r(:), 'k-','LineWidth',1);
-set(ax(4),'YLim',[-1 1],'XTickLabel',{'23C';'29C'});
+set(ax(6),'YLim',[-1 1],'XTickLabel',{'23C';'29C'});
 ylabel('correlation');
 legend(bh,{'Shi';'Iso';'Trp'},'Location','SouthEast');
 
-% generate confidence intervals
-tmp = [x_23 y_23];
-tmp(any(isnan(tmp),2),:) = [];
-PCARegressionCI([x_23,y_23],subplot(2,nplots,4),'XLim',[-rr rr],'YLim',[-rr rr]);
-axis('equal');
-set(gca,'XLim',[-rr rr],'YLim',[-rr rr]);
+hold(ax(4),'on');
+PCARegressionCI([x_23,y_23],ax(4));
+xlabel(ax(4),'Clumpiness');
+ylabel(ax(4),'Switchiness');
 
-tmp = [x_33 y_33];
-tmp(any(isnan(tmp),2),:) = [];
-PCARegressionCI(tmp,subplot(2,nplots,5),'XLim',[-rr rr],'YLim',[-rr rr]);
-axis('equal');
-set(gca,'XLim',[-rr rr],'YLim',[-rr rr]);
+hold(ax(5),'on');
+PCARegressionCI([x_33,y_33],ax(5));
+xlabel(ax(5),'Clumpiness');
+ylabel(ax(5),'Switchiness');
+
+% % generate confidence intervals for temp 23
+% hold(ax(4),'on');
+% xpts = linspace(-rr,rr,1000);
+% nreps = 1000;
+% ypts = zeros(nreps,numel(xpts));
+% ci95 = zeros(2,numel(xpts));
+% for i=1:nreps
+%     idx = randi(numel(x_23),[numel(x_23) 1]);
+%     b = polyfit(x_23(idx),y_23(idx),1);
+%     ypts(i,:) = xpts.*b(1) + b(2);
+% end
+% ci95(1,:) = prctile(ypts,97.5);
+% ci95(2,:) = prctile(ypts,2.5);
+% vx = [xpts fliplr(xpts)];
+% vy = [ci95(2,:) fliplr(ci95(1,:))];
+% patch('XData',vx(:),'YData',vy(:),'FaceColor',[.75 .75 .75],...
+%     'EdgeColor','none','Parent',ax(4));
+% b = polyfit(x_23,y_23,1);
+% plot(xpts,xpts.*b(1) + b(2),'k--','Parent',ax(4));
+% pretty_scatter(x_23,y_23,'k','Parent',ax(4));
+% axis('equal');
+% set(ax(4),'XLim',[-rr rr],'YLim',[-rr rr]);
+% xlabel(ax(4),'Clumpiness');
+% ylabel(ax(4),'Switchiness');
+% 
+% % generate confidence intervals for temp 33
+% mask = isnan(x_33) | isnan(y_33);
+% x_33(mask) = [];
+% y_33(mask) = [];
+% hold(ax(5),'on');
+% xpts = linspace(-rr,rr,1000);
+% nreps = 1000;
+% ypts = zeros(nreps,numel(xpts));
+% ci95 = zeros(2,numel(xpts));
+% for i=1:nreps
+%     idx = randi(numel(x_33),[numel(x_33) 1]);
+%     b = polyfit(x_33(idx),y_33(idx),1);
+%     ypts(i,:) = xpts.*b(1) + b(2);
+% end
+% ci95(1,:) = prctile(ypts,97.5);
+% ci95(2,:) = prctile(ypts,2.5);
+% vx = [xpts fliplr(xpts)];
+% vy = [ci95(2,:) fliplr(ci95(1,:))];
+% patch('XData',vx(:),'YData',vy(:),'FaceColor',[.75 .75 .75],...
+%     'EdgeColor','none','Parent',ax(5));
+% b = polyfit(x_33,y_33,1);
+% plot(xpts,xpts.*b(1) + b(2),'k--','Parent',ax(5));
+% pretty_scatter(x_33,y_33,'k','Parent',ax(5));
+% axis('equal');
+% set(ax(5),'XLim',[-rr rr],'YLim',[-rr rr]);
+% xlabel(ax(5),'Clumpiness');
+% ylabel(ax(5),'Switchiness');
+
+ah = findall(gcf,'Type','axes');
+for i=1:numel(ah)
+   ah(i).Units = 'inches';
+   ah(i).Position(3:4) = 0.8229;
+end

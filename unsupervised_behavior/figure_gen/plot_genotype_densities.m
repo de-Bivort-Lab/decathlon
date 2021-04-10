@@ -9,7 +9,7 @@ for i=1:numel(strains)
     
     % get density estimate from embedding data
     f = str_list_contains(embedding.label,strains{i});
-    embedded_pts = combineCells(embedding.z_data(f));
+    embedded_pts = cat(1,embedding.z_data{f});
     embedded_z = cat(1,embedding.z_speed{f});
     [xx,split_densities{1,i}] = findPointDensity(embedded_pts,sig,numPoints,rangeVals);
 

@@ -47,8 +47,6 @@ D_b(1).data = d;
 % set rnaseq preprocessing params and pre-process
 min_tot_reads = 1E6;
 min_rpm = 10;
-molaspass=interp1([1 51 102 153 204 256],...
-        [0 0 0; 0 0 .75; .5 0 .8; 1 .1 0; 1 .9 0; 1 1 1],1:256);
     
 % preprocess rnaseq data
 D_p = preprocess_rnaseq_data(D_seq, min_tot_reads, min_rpm);
@@ -77,12 +75,20 @@ for i=1:numel(D_p)
     end
 end
 
+%%
+
 % ---- CLUSTERED MODEL P-VAL HEATMAPS ---- %
 for i=1:numel(model_p_value)
     figure;
     p = -log10(model_p_value{i})';
     p(isnan(p)) = 0;
     [~, ~, grp_idx] = group_apriori_fields(D_b(i));
+    
+    y = cumsum(cellfun(@numel,grp_idx));
+    y = [[1;y(1:end-1)+1] y];
+    vx = repmat(-1.*[1;1;.5;.5;1],1,size(y,1));
+    vy = [y(:,1) y(:,2) y(:,2) y(:,1) y(:,1)] + repmat([0 0 0 0 0],size(y,1),1);
+    
     grp_idx = cat(1,grp_idx{:});
     [~,g_perm] = sort(nanmean(p),'descend');
 
@@ -100,7 +106,9 @@ for i=1:numel(model_p_value)
     title(sprintf('decathlon-%i - mean expression sort',i));
     xlabel('genes');
     ylabel('behaviors');
-    set(gca,'TickLength',[0 0]);
+    set(gca,'TickLength',[0 0],'Clipping','off');
+    hold on;
+    patch('XData',vx.*50,'YData',vy','FaceColor','k','EdgeColor','none');
 end
 
 

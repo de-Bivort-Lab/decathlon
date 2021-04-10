@@ -4,6 +4,8 @@
 embedding = load(cat(2,fpath,fname));
 embedding = embedding.embeddings;
 
+%%
+
 % find t-SNE speed threshold for parsing t-SNE trajectories into pauses at modes
 make_plot = true;
 [sigma,embedding.z_thresh] = fit_tsne_z_logspeed_gmm(embedding.z_speed,make_plot);
@@ -37,49 +39,86 @@ plot_density(filt_density,ones(size(density)));
 title('Slow speed filtered density map');
 
 % uncomment to plot individual densities
-% plot_individual_densities(embedding,sig,numPoints,rangeVals);
+%plot_individual_densities(embedding,sig,numPoints,rangeVals);
 
 % uncomment to plot densities by genotype and t-SNE speed mode
-% plot_genotype_densities(embedding,sig,numPoints,rangeVals,[0 max(density(:))*1.02]);
+%plot_genotype_densities(embedding,sig,numPoints,rangeVals,[0 max(density(:))*1.02]);
 
 % uncomment to plot individual z-trace position samples
-% plot_tsne_position_samples(embedding);
+%plot_tsne_position_samples(embedding);
 
 
-%% Assign behavioral mode classifications
+% Assign behavioral mode classifications
 
 % watershed density map and classify each frame as one of the resulting modes
 [frameIDs,modeIDs,pdfs,idxMap] = mode_from_embeddingValues(filt_density,xx,embedding.z_data);
 
-% plot density for BK-iso
+%%
+% plot density for inbred
 is_bk = false(size(frameIDs,1),1);
 is_bk(1:166) = true;
 slow_embedded_pts = cellfun(@(emv,fsm) emv(fsm,:), embedding.z_data, slow_mode,'UniformOutput',false);
 bk_slow_pts = cat(1,slow_embedded_pts{is_bk});
-[xx,bk_density] = findPointDensity(bk_slow_pts,sig,numPoints,rangeVals);
+[~,bk_density] = findPointDensity(bk_slow_pts,sig,numPoints,rangeVals);
 figure;
 plot_density(bk_density,idxMap,'Numbered',0,'OutlineDensity',filt_density);
 
-% plot individual pdfs and mode map pdf
-plot_mode_pdfs(idxMap,pdfs);
+% plot density for outbred
+bk_slow_pts = cat(1,slow_embedded_pts{~is_bk});
+[xx,nex_density] = findPointDensity(bk_slow_pts,sig,numPoints,rangeVals);
+figure;
+plot_density(nex_density,idxMap,'Numbered',0,'OutlineDensity',filt_density);
+
+% plot individual pdfs and mode map pdfs
+plot_mode_pdfs(idxMap,pdfs,is_bk);
+
 figure;
 plot_density(filt_density,idxMap,'Numbered',1);
 
 plot_all_pdf_corr(pdfs);
 
 % read in labels for each mode from hand annotated file
-mode_label_path = 'D:\D2D3_combined_unsupervised\master data\mode_descriptions.txt';
+mode_label_path = uigetfile(pwd,'Select mode_descriptions.txt','*.txt');
 mode_labels = load_manual_mode_labels(mode_label_path);
 
 % plot PDF correlation matrices for Nex and Bk-iso separately
-[fh,~,~,zp]=plotCorr(pdfs(is_bk,:),'Labels',mode_labels(:),'Patch',false,'FontSize',8);
-close(fh(2));
+[~,~,~,zp]=plotCorr(pdfs(is_bk,:),'Labels',mode_labels(:),'Patch',false,'FontSize',8);
 title('Bk-iso PDF corrmat');
 axis('equal','tight');
 fh = plotCorr(pdfs(~is_bk,zp),'Labels',mode_labels(zp),'Patch',false,'Cluster',false,'FontSize',8);
-close(fh(2));
 title('Nex PDF corrmat');
 axis('equal','tight');
+
+% plot connected components dimensionality histogram
+figure;
+nreps = 100;
+for i=1:2
+    ah = subplot(2,1,i);
+    if mod(i,2)
+        d = pdfs(is_bk,:);
+        title_str = 'inbred';
+    else
+        d = pdfs(~is_bk,:);
+        title_str = 'outbred';
+    end
+    
+    comp_cts = zeros(nreps);
+    for j=1:nreps
+        if mod(j,10)==0
+           fprintf('Conn. comp. simulation %i of %i\n',j,nreps); 
+        end
+        bs_d = d(randi(size(d,1),[size(d,1) 1]),:);
+        
+        % compute conn comp spectrum
+        comp_cts(j,:) = conn_comp_spectrum(corr(bs_d),nreps);
+    end
+    
+    cts = histc(comp_cts(:),1:size(d,2));
+    bar(1:size(d,2),log10(cts),'FaceColor',[.65 .65 .65],'EdgeColor','none');
+    xlabel('conn. comp');
+    ylabel('log(counts)');
+    title(title_str);
+end
 
 %% use classifications to assign pause bouts in each mode (over some min duration)
 
@@ -102,17 +141,27 @@ nflies = numel(filt_frameIDs);
 mode_trans_probs = cellfun(@(si,i) find_mode_transitions(si,modeIDs,i,numel(starts)),...
     starts,num2cell(1:numel(starts))','UniformOutput',false);
 
-% compute average transition prob matrix from all flies
+% compute average transition prob matrix from inbred flies
 all_trans = cat(3,mode_trans_probs{:});
-avg_trans = nanmean(all_trans(:,:,is_bk),3);
-figure; imagesc(avg_trans(zp,zp));
-ylabel('initial state');
-xlabel('final state');
-title('Unsupervised transition probabilities');
-axis('equal','tight')
-caxis([0 .15]);
-colormap(density_cmap);
-colorbar;
+figure;
+for i=1:2
+    ah = subplot(2,1,i);
+    if mod(i,2)
+        avg_trans = nanmean(all_trans(:,:,is_bk),3);
+        title_str = 'inbred';
+    else
+        avg_trans = nanmean(all_trans(:,:,~is_bk),3);
+        title_str = 'outbred';
+    end
+    imagesc(avg_trans(zp,zp));
+    ylabel('initial state');
+    xlabel('final state');
+    title(sprintf('Transition probabilities (%s)',title_str));
+    axis('equal','tight')
+    caxis([0 .15]);
+    colormap(density_cmap);
+    colorbar;
+end
 
 flat_trans_probs = cellfun(@(mtp) mtp(:), mode_trans_probs,'UniformOutput',false);
 

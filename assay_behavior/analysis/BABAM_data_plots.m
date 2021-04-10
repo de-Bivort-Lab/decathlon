@@ -29,19 +29,38 @@ z_data = zscore(data);
 plot_pca_n_drop_scree(z_data,max_reps);
 title({'Robie Data';'PCA drop N 150 reps'});
 
-% compute effective dimensionality connected components in correlation matrix
-figure; hold on;
+%% compute effective dimensionality connected components in correlation matrix
+
+figure;
 d = z_data;
-[out,intrinsic_dim,~]=decathlonConnCompSweep(d,1000);
-bins = 1:8:size(d,2);
-cts = histc(intrinsic_dim,bins);
-bar(bins,log(cts),'EdgeColor','none','FaceColor',[0 0 0]);
-ylabel('log(count)');
-xlabel('effective dimensionality');
-set(gca,'XLim',[0 size(d,2)]);
+nfeat = size(d,2);
+nreps = 100;
+nflies = size(d,1);
+
+comp_cts = zeros(nreps);
+for j=1:nreps
+    if mod(j,10)==0
+       fprintf('Conn. comp. simulation %i of %i\n',j,nreps); 
+    end
+    dd = d(randi(nflies,[nflies 1]),:);
+
+    % compute conn comp spectrum
+    comp_cts(j,:) = conn_comp_spectrum(corr(dd),nreps);
+end
+
+cts = histc(comp_cts(:),1:nfeat);
+bar(1:nfeat,log10(cts),'FaceColor',[.65 .65 .65],'EdgeColor','none');
+xlabel('conn. comp');
+ylabel('log(counts)');
+drawnow;
+ah = gca;
+ah.Units = 'inches';
+ah.Position(3:4) = [2 1];
+drawnow;
 
 
-% BABAM t-SNE plots
+
+%% BABAM t-SNE plots
 fh = figure;
 dist_type = 'euclidean';
 perplex = 20;

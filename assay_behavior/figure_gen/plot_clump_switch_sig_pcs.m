@@ -1,6 +1,5 @@
 % set decathlon_final_data.mat directory and load data
-fdir = '';
-D = load_decathlon_structs(fdir,'D13_als');
+D=load_decathlon_structs(pwd,'D_als_filled_batch_merged');
 
 % pair structs to match fields
 opts = {'CollapseFields','all','CollapseMode','PCA'};
@@ -18,13 +17,21 @@ grp_idx(mask) = [];
 clump_switch_data = D_p(1).data(:,grp_idx);
 clump_switch_labels = D_p(1).fields(grp_idx);
 
-% define significant pairs (p < 0.005)
-[~,p] = corr(clump_switch_data,'Type','spearman','rows','pairwise');
+% define significant pairs (p < 0.05)
+[~,p] = corr(clump_switch_data);
 unique_p_idx = upper_triangle_idx(size(p,1));
-is_sig = p(unique_p_idx)<0.005;
+is_sig = p(unique_p_idx)<0.05;
 [r,c] = ind2sub(size(p),unique_p_idx(is_sig));
 clump_switch_sig_pairs = [grp_idx(r)' grp_idx(c)'];
 scatter_field_pairs(D_p(1),clump_switch_sig_pairs);
+
+ah = findall(gcf,'Type','axes');
+for i=1:numel(ah)
+   ah(i).Units = 'inches';
+   ah(i).Position(3:4) = 1;
+end
+
+%%
 
 % plot loadings for those PCs
 D_sig = D_p(1);

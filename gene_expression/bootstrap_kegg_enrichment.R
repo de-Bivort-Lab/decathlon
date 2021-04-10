@@ -3,7 +3,7 @@
 
 # import cluster profiler
 library('clusterProfiler')
-source("decathlon/decathlon_paper_code/gene_expression/decathlon_enrich_utils.R")
+source("C://Users/winsl0w/Documents/decathlon/decathlon_paper_code/gene_expression/decathlon_enrich_utils.R")
 
 # EDIT FILE PATH to set the current working directory to RNAseq_bootstrap folder
 input_path = choose.dir(default = "", caption = "Select RNAseq_bootstrap folder");
@@ -24,7 +24,7 @@ d12_num_metrics = list();
 d12_metric_mats = list();
 
 
-for(k in 1:3){
+for(k in 1:2){
   
   # compute observed enrichment and filter duplicate results
   obs_d <- read.csv(obs_paths[k],sep=",", stringsAsFactors = FALSE);

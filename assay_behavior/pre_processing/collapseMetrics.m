@@ -121,6 +121,10 @@ switch lower(fields)
                 D.loadings_labels = cellfun(@(gi,n) repmat({D.fields(gi)},n,1),...
                     grp_idx, num2cell(npcs), 'UniformOutput', false);
                 D.loadings_labels = cat(1,D.loadings_labels{:});
+                D.var_exp = cellfun(@(e,n) num2cell(e(1:n),1), ...
+                    lat, num2cell(npcs), 'UniformOutput', false);
+                D.var_exp = cat(1,D.var_exp{:});
+                D.var_exp = cat(1,D.var_exp{:});
         end
         
         D.data = dMat;

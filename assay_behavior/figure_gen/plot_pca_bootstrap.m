@@ -77,7 +77,7 @@ x = 1:npcs;
 
 lh = semilogy(1:npcs,var_exp,'Color',color,'LineStyle','-','LineWidth',1);
 hold on;
-plot(1:npcs,var_exp,'o','Color',color,'LineWidth',1);
+plot(1:npcs,var_exp,'-','Color',color,'LineWidth',1);
 %lh = plot(1:npcs,var_exp,'Color',color,'LineStyle','-','LineWidth',1);
 vx = [1 x fliplr(x)];
 vy = [ci95(1,2) ci95(:,1)' fliplr(ci95(:,2)')];

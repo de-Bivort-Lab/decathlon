@@ -9,7 +9,9 @@ end
 % generate nReps als imputed data sets for each decathlon struct
 fprintf('\n');
 for i=1:nReps
-    fprintf('ALS imputation: iteration %i of %i\n',i,nReps);
+    if mod(i,10) == 0
+        fprintf('ALS imputation: iteration %i of %i\n',i,nReps);
+    end
     D_imputed = impute_decathlon_structs(D,'ImputeMode','als','Standardize',false);
     for j=1:numel(D)
         als_data{j}(:,:,i) = D_imputed(j).data;

@@ -200,34 +200,17 @@ end
 
 % load behavioral data
 dec_data_dir = uigetdir(pwd,'Select the decathlon_paper_data directory');
-D_b = load_decathlon_structs(dec_data_dir,'D_als_filled');
+D_b = load_decathlon_structs(dec_data_dir,'D_us');
+
+%%
 
 % get field sorting order
 for i=1:numel(D_b)
-    fields = D_b(i).fields;
-    [a,m,d] = parse_fieldnames(fields);
-    fields = cellfun(@(a,m) sprintf('%s %s',a,m),a,m,'UniformOutput',false);
-    is_circ = strcmp(a,'Circadian');
-    fields(is_circ) = cellfun(@(s,d) sprintf('%s (%i)',s,d),...
-        fields(is_circ),num2cell(d(is_circ)),'UniformOutput',false);
-    D_b(i).fields = fields;
-    
     % sort by apriori group for d1, then match d2 to d1
-    [~, grp_name, grp_idx] = group_apriori_fields(D_b(i));
-    D_b(i).fields = D_b(i).fields(cat(1,grp_idx{:}));
-    D_b(i).data = D_b(i).data(:,cat(1,grp_idx{:}));
-end
-
-for i=1:numel(d_m_unshuf)
-    [~, ~, grp_idx] = group_apriori_fields(D_b(i));
-    grp_idx = cat(1,grp_idx{:});
-    d_m_unshuf(i).cols = D_b(i).fields(grp_idx);
-end
-
-% ----  PLOT KEGG PATHWAY x BEHAVIORAL METRIC HEATMAPS ---- %
-for i=1:numel(d_m_unshuf)
-    
-    [~, ~, grp_idx] = group_apriori_fields(D_b(i));
+    [~,grp_idx,fields] = group_unsupervised_clusters;
+    D_b(i).fields = fields;
+    D_b(i).data = D_b(i).pdfs(:,cat(2,grp_idx{:}));
+    d_m_unshuf(i).cols = pretty_labels(fields);
     
     figure;
     imagesc(flip(d_m_unshuf(i).data));
@@ -239,7 +222,7 @@ for i=1:numel(d_m_unshuf)
     set(gca,'YTick',1:numel(d_m_unshuf(i).rows),'YTickLabels',...
         flip(d_m_unshuf(i).rows),'FontSize',8,'TickLength',[0 0],...
         'XTick',1:numel(d_m_unshuf(i).cols),'XTickLabels',...
-        pretty_labels(d_m_unshuf(i).cols),...
+        d_m_unshuf(i).cols,...
         'XTickLabelRotation',90);
     
     id_group = cellfun(@(gi,i) repmat(i,numel(gi),1),...
@@ -261,7 +244,7 @@ for i=1:numel(d_m_unshuf)
     end
 
 
-    max_y = numel(cat(1,grp_idx{:}));
+    max_y = numel(cat(2,grp_idx{:}));
     hold on;
     patch('YData',vx_groups-1,'XData',vy_groups-0.5,...
         'FaceColor','flat','CData',linspace(0,1,numel(grp_idx)));
@@ -504,7 +487,8 @@ for j = 1:numel(bg_path)
         colormap(flip(bone));
         colorbar;
         caxis([0 1]);
-        title(sprintf('Decathlon %i - %s',j,batch_names{j}{i}{1}));
+        label = pretty_labels(batch_names{j}{i});
+        title(sprintf('Decathlon %i - %s',j,label{1}));
         ylabel('KEGG enrichment');
         xlabel('gene');
         set(gca,'YTick',1:numel(cats{j}),'YTickLabel',cats{j},'TickLength',[0 0],'XTick',[]);
@@ -549,40 +533,40 @@ end
 %%
 
 load(['C:\Users\winsl0w\Documents\decathlon\decathlon_paper_code\'...
-    'decathlon\gene_expression\id_conversion_data\kegg_pathway_lookup.mat']);
+    'gene_expression\id_conversion_data\kegg_pathway_lookup.mat']);
 
-D_enrichment_results = repmat(struct(...
+D_enrichment_results_us = repmat(struct(...
     'experiment',[],'isogenic',[],'prob_gene_given_cat',[],...
     'cat_labels',[],'gene_labels',[],'gene_kegg_ids',[],'gene_fb_gene_num',[],...
     'avg_min_pval',[],'avg_metrics_hit',[]),numel(data),1);
 exps = arrayfun(@(i) sprintf('decathlon-%i',i), 1:numel(data), 'UniformOutput', false);
 is_iso = true(numel(data),1);
 
-for i=1:numel(D_enrichment_results)
-    D_enrichment_results(i).experiment = exps{i};
-    D_enrichment_results(i).isogenic = is_iso(i);
-    D_enrichment_results(i).prob_gene_given_cat = data{i};
-    D_enrichment_results(i).cat_labels = cats{i};
-    D_enrichment_results(i).gene_labels = convert_gene_ids(genes{i},'kegg','name');
-    D_enrichment_results(i).gene_kegg_ids = genes{i};
-    D_enrichment_results(i).gene_fb_gene_num = convert_gene_ids(genes{i},'kegg','fbgn');
-    D_enrichment_results(i).avg_min_pval = flip(d_p_unshuf(i).data);
-    D_enrichment_results(i).avg_metrics_hit = flip(d_n_unshuf(i).data);
+for i=1:numel(D_enrichment_results_us)
+    D_enrichment_results_us(i).experiment = exps{i};
+    D_enrichment_results_us(i).isogenic = is_iso(i);
+    D_enrichment_results_us(i).prob_gene_given_cat = data{i};
+    D_enrichment_results_us(i).cat_labels = cats{i};
+    D_enrichment_results_us(i).gene_labels = convert_gene_ids(genes{i},'kegg','name');
+    D_enrichment_results_us(i).gene_kegg_ids = genes{i};
+    D_enrichment_results_us(i).gene_fb_gene_num = convert_gene_ids(genes{i},'kegg','fbgn');
+    D_enrichment_results_us(i).avg_min_pval = flip(d_p_unshuf(i).data);
+    D_enrichment_results_us(i).avg_metrics_hit = flip(d_n_unshuf(i).data);
     
     
     [a,b] = ismember(cats{i},kegg_pathway_lookup.name);
-    D_enrichment_results(i).cat_id = cell(numel(cats),1);
-    D_enrichment_results(i).cat_id(a) = kegg_pathway_lookup.id(b(a));
-    D_enrichment_results(i).cat_genes = cell(numel(cats),1);
+    D_enrichment_results_us(i).cat_id = cell(numel(cats),1);
+    D_enrichment_results_us(i).cat_id(a) = kegg_pathway_lookup.id(b(a));
+    D_enrichment_results_us(i).cat_genes = cell(numel(cats),1);
     for j=1:numel(cats{i})
-        D_enrichment_results(i).cat_genes{j} = genes{i}(data{i}(j,:)>0);  
+        D_enrichment_results_us(i).cat_genes{j} = genes{i}(data{i}(j,:)>0);  
     end
-    D_enrichment_results(i).p_metric = flip(d_m_unshuf(i).data);
-    D_enrichment_results(i).metric_labels = d_m_unshuf(i).cols;
+    D_enrichment_results_us(i).p_metric = flip(d_m_unshuf(i).data);
+    D_enrichment_results_us(i).metric_labels = d_m_unshuf(i).cols;
 end
 
 %%
 
-for i=1:numel(D_enrichment_results)
-    D_enrichment_results(i).shuffled_avg_min_pval = d_p_shuf(i).data;
+for i=1:numel(D_enrichment_results_us)
+    D_enrichment_results_us(i).shuffled_avg_min_pval = d_p_shuf(i).data;
 end
