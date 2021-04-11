@@ -209,7 +209,7 @@ for i=1:numel(D_b)
     % sort by apriori group for d1, then match d2 to d1
     [~,grp_idx,fields] = group_unsupervised_clusters;
     D_b(i).fields = fields;
-    D_b(i).data = D_b(i).pdfs(:,cat(2,grp_idx{:}));
+    D_b(i).data = D_b(i).pdfs(:,cat(1,grp_idx{:}));
     d_m_unshuf(i).cols = pretty_labels(fields);
     
     figure;
@@ -244,7 +244,7 @@ for i=1:numel(D_b)
     end
 
 
-    max_y = numel(cat(2,grp_idx{:}));
+    max_y = numel(cat(1,grp_idx{:}));
     hold on;
     patch('YData',vx_groups-1,'XData',vy_groups-0.5,...
         'FaceColor','flat','CData',linspace(0,1,numel(grp_idx)));
